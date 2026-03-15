@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.microhabits.app-mergeDebugResources-70:/values-h320dp-port-v13/values-h320dp-port-v13.xml",
+            "map": [
+                {
+                    "source": "/home/l7/.gradle/caches/9.0-milestone-1/transforms/fec7fb95abe7d3a7c0ea9e5869913b21/transformed/material-1.12.0/res/values-h320dp-port-v13/values-h320dp-port-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "63",
+                        "endOffsets": "114"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,5 +1,6 @@
 package com.microhabits.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,23 +8,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.microhabits.data.model.DailyStats
 import com.microhabits.ui.components.StatCard
 import com.microhabits.ui.theme.*
 import com.microhabits.viewmodel.HabitViewModel
-import com.patrykandpatrick.vico.compose.cartesian.*
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottomAxis
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStartAxis
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,18 +29,6 @@ fun StatsScreen(
     viewModel: HabitViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.statsState.collectAsState()
-
-    val modelProducer = remember { CartesianChartModelProducer() }
-
-    LaunchedEffect(uiState.dailyStats) {
-        if (uiState.dailyStats.isNotEmpty()) {
-            withContext(Dispatchers.Default) {
-                modelProducer.runTransaction {
-                    columnSeries { series(uiState.dailyStats.map { it.completedCount }) }
-                }
-            }
-        }
-    }
 
     Scaffold(
         containerColor = BgDark,
@@ -57,7 +42,8 @@ fun StatsScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = BgDark,
-                    titleContentColor = Color(0xFFF0EFF8)
+                    titleContentColor = Color(0xFFF0EFF8),
+                    navigationIconContentColor = Color(0xFFF0EFF8)
                 )
             )
         }
@@ -65,11 +51,12 @@ fun StatsScreen(
         LazyColumn(
             contentPadding = PaddingValues(
                 top = padding.calculateTopPadding(),
-                bottom = 32.dp, start = 24.dp, end = 24.dp
+                bottom = 32.dp,
+                start = 24.dp,
+                end = 24.dp
             ),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // ── Stat cards grid ────────────────────────────────────────────
             item {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -79,18 +66,17 @@ fun StatsScreen(
                     StatCard("Jours actifs", "${uiState.totalActiveDays}", Modifier.weight(1f))
                 }
             }
+
             item {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     StatCard("Complétions", "${uiState.totalCompletions}", Modifier.weight(1f))
-                    val level = computeLevel(uiState.totalXp)
-                    StatCard("Niveau", "Lv. $level", Modifier.weight(1f))
+                    StatCard("Niveau", "Lv. ${computeLevel(uiState.totalXp)}", Modifier.weight(1f))
                 }
             }
 
-            // ── Bar chart ──────────────────────────────────────────────────
             item {
                 Card(
                     Modifier.fillMaxWidth(),
@@ -99,34 +85,23 @@ fun StatsScreen(
                 ) {
                     Column(Modifier.padding(20.dp)) {
                         Text(
-                            "Habitudes par jour (30 derniers jours)",
+                            "Habitudes / jour (30 derniers jours)",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                         if (uiState.dailyStats.isNotEmpty()) {
-                            CartesianChartHost(
-                                chart = rememberCartesianChart(
-                                    rememberColumnCartesianLayer(
-                                        columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                                            rememberLineComponent(
-                                                color = Indigo500,
-                                                thickness = 12.dp,
-                                                shape = com.patrykandpatrick.vico.core.common.shape.CorneredShape.rounded(4)
-                                            )
-                                        )
-                                    ),
-                                    startAxis = rememberStartAxis(),
-                                    bottomAxis = rememberBottomAxis()
-                                ),
-                                modelProducer = modelProducer,
+                            SimpleBarChart(
+                                data = uiState.dailyStats,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(200.dp)
+                                    .height(180.dp)
                             )
                         } else {
                             Box(
-                                Modifier.fillMaxWidth().height(180.dp),
-                                contentAlignment = androidx.compose.ui.Alignment.Center
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     "Complete des habitudes pour voir tes stats !",
@@ -139,7 +114,6 @@ fun StatsScreen(
                 }
             }
 
-            // ── XP per day table ──────────────────────────────────────────
             if (uiState.dailyStats.isNotEmpty()) {
                 item {
                     Card(
@@ -147,21 +121,32 @@ fun StatsScreen(
                         shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.cardColors(containerColor = SurfaceDark)
                     ) {
-                        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Historique récent", style = MaterialTheme.typography.titleMedium)
+                        Column(
+                            Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                "Historique récent",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                             uiState.dailyStats.takeLast(7).reversed().forEach { stat ->
                                 Row(
                                     Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(stat.date, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        stat.date,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Text(
                                         "${stat.completedCount} habit. · ${stat.totalXp} XP",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Indigo300
                                     )
                                 }
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                )
                             }
                         }
                     }
@@ -171,8 +156,50 @@ fun StatsScreen(
     }
 }
 
+@Composable
+private fun SimpleBarChart(
+    data: List<DailyStats>,
+    modifier: Modifier = Modifier
+) {
+    val maxVal = data.maxOfOrNull { it.completedCount }
+        ?.toFloat()
+        ?.coerceAtLeast(1f) ?: 1f
+
+    Canvas(modifier) {
+        val totalBars = data.size
+        val barWidth = (size.width / totalBars) * 0.6f
+        val gap = (size.width / totalBars) * 0.4f
+        val chartHeight = size.height - 16.dp.toPx()
+
+        data.forEachIndexed { i, stat ->
+            val x = i * (barWidth + gap) + gap / 2f
+            val barH = (stat.completedCount / maxVal) * chartHeight
+
+            drawRoundRect(
+                color = Surface2Dark,
+                topLeft = Offset(x, 0f),
+                size = Size(barWidth, chartHeight),
+                cornerRadius = CornerRadius(6.dp.toPx())
+            )
+
+            if (barH > 0f) {
+                drawRoundRect(
+                    color = Indigo500,
+                    topLeft = Offset(x, chartHeight - barH),
+                    size = Size(barWidth, barH),
+                    cornerRadius = CornerRadius(6.dp.toPx())
+                )
+            }
+        }
+    }
+}
+
 private fun computeLevel(totalXp: Int): Int {
-    var xp = totalXp; var level = 1
-    while (xp >= level * 100) { xp -= level * 100; level++ }
+    var xp = totalXp
+    var level = 1
+    while (xp >= level * 100) {
+        xp -= level * 100
+        level++
+    }
     return level
 }

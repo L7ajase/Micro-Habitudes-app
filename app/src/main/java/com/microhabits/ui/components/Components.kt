@@ -1,6 +1,7 @@
 package com.microhabits.ui.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,17 +20,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.microhabits.data.model.HabitWithStatus
 import com.microhabits.ui.theme.*
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.foundation.Canvas
-
-// ── Circular Progress ─────────────────────────────────────────────────────────
 
 @Composable
 fun CircularProgressIndicatorCustom(
@@ -49,14 +45,12 @@ fun CircularProgressIndicatorCustom(
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(size)) {
             val stroke = Stroke(strokeWidth.toPx(), cap = StrokeCap.Round)
-            drawArc(trackColor,    startAngle = -90f, sweepAngle = 360f, useCenter = false, style = stroke)
+            drawArc(trackColor, startAngle = -90f, sweepAngle = 360f, useCenter = false, style = stroke)
             drawArc(progressColor, startAngle = -90f, sweepAngle = 360f * animatedProgress, useCenter = false, style = stroke)
         }
         content()
     }
 }
-
-// ── XP Progress Bar ───────────────────────────────────────────────────────────
 
 @Composable
 fun XpProgressBar(
@@ -69,10 +63,7 @@ fun XpProgressBar(
     val animFraction by animateFloatAsState(fraction, tween(700), label = "xpBar")
 
     Column(modifier) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Niveau $level", style = MaterialTheme.typography.labelLarge, color = Indigo300)
             Text("$current / $max XP", style = MaterialTheme.typography.bodySmall)
         }
@@ -99,8 +90,6 @@ fun XpProgressBar(
     }
 }
 
-// ── Habit Card (drag + complete) ──────────────────────────────────────────────
-
 @Composable
 fun HabitCard(
     item: HabitWithStatus,
@@ -118,48 +107,35 @@ fun HabitCard(
     val scale by animateFloatAsState(bounceScale, spring(Spring.DampingRatioMediumBouncy), label = "bounce")
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .scale(scale),
+        modifier = modifier.fillMaxWidth().scale(scale),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceDark),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Accent bar
             Box(
-                Modifier
-                    .width(4.dp)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(accentColor)
+                Modifier.width(4.dp).height(44.dp)
+                    .clip(RoundedCornerShape(2.dp)).background(accentColor)
             )
-
-            // Emoji icon
             Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
                     .background(accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(habit.emoji, fontSize = 22.sp)
             }
-
-            // Text info
             Column(Modifier.weight(1f)) {
                 Text(
                     text = habit.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (item.completedToday)
                         MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.onSurface
+                    else
+                        MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${habit.durationMinutes} min · +${habit.xpReward} XP" +
@@ -167,43 +143,29 @@ fun HabitCard(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-
-            // Focus button
             TextButton(
                 onClick = onFocusClick,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
                 Text("▶", color = accentColor, fontSize = 13.sp)
             }
-
-            // Checkmark
             val checkBg = if (item.completedToday) Green400 else Color.Transparent
             val checkBorder = if (item.completedToday) Green400 else MaterialTheme.colorScheme.outline
-
             Box(
-                Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
+                Modifier.size(36.dp).clip(CircleShape)
                     .background(checkBg)
                     .border(1.5.dp, checkBorder, CircleShape)
-                    .clickable {
-                        bounceScale = 0.85f
-                        onToggle()
-                    },
+                    .clickable { bounceScale = 0.85f; onToggle() },
                 contentAlignment = Alignment.Center
             ) {
                 if (item.completedToday) {
                     Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     LaunchedEffect(Unit) {
-                        kotlinx.coroutines.delay(80)
-                        bounceScale = 1.2f
-                        kotlinx.coroutines.delay(120)
-                        bounceScale = 1f
+                        kotlinx.coroutines.delay(80); bounceScale = 1.2f
+                        kotlinx.coroutines.delay(120); bounceScale = 1f
                     }
                 }
             }
-
-            // Drag handle
             Icon(
                 Icons.Default.DragHandle, null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -212,8 +174,6 @@ fun HabitCard(
         }
     }
 }
-
-// ── Stat card ─────────────────────────────────────────────────────────────────
 
 @Composable
 fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
