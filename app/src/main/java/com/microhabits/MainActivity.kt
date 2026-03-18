@@ -1,10 +1,13 @@
 package com.microhabits
 
+import android.os.Build
 import android.os.Bundle
+import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.view.WindowCompat
 import com.microhabits.ui.AppNavGraph
 import com.microhabits.ui.theme.MicroHabitsTheme
 import com.microhabits.viewmodel.HabitViewModel
@@ -18,7 +21,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        viewModel.seedIfEmpty()   // seed default habits on first launch
+
+        // Hardware acceleration — réduit le lag sur appareils bas de gamme
+        window.setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+            android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        )
+
+        viewModel.seedIfEmpty()
+
         setContent {
             MicroHabitsTheme {
                 AppNavGraph()

@@ -447,15 +447,15 @@ public final class DaggerMicroHabitsApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_microhabits_viewmodel_HabitViewModel = "com.microhabits.viewmodel.HabitViewModel";
-
       static String com_microhabits_viewmodel_FocusViewModel = "com.microhabits.viewmodel.FocusViewModel";
 
-      @KeepFieldType
-      HabitViewModel com_microhabits_viewmodel_HabitViewModel2;
+      static String com_microhabits_viewmodel_HabitViewModel = "com.microhabits.viewmodel.HabitViewModel";
 
       @KeepFieldType
       FocusViewModel com_microhabits_viewmodel_FocusViewModel2;
+
+      @KeepFieldType
+      HabitViewModel com_microhabits_viewmodel_HabitViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {

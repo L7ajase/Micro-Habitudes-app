@@ -1,6 +1,7 @@
 package com.microhabits.ui.screens
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,8 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.microhabits.data.model.Habit
-import com.microhabits.data.model.HabitWithStatus
 import com.microhabits.ui.components.*
 import com.microhabits.ui.theme.*
 import com.microhabits.viewmodel.HabitViewModel
@@ -32,7 +31,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.compose.foundation.ExperimentalFoundationApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -44,19 +42,24 @@ fun HomeScreen(
     val uiState by viewModel.homeState.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
-    var habitList by remember(uiState.habitsWithStatus) {
-        mutableStateOf(uiState.habitsWithStatus)
-    }
+    var habitList by remember { mutableStateOf(uiState.habitsWithStatus) }
 
     val lazyListState = rememberLazyListState()
-
     val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
         habitList = habitList.toMutableList().apply { add(to.index, removeAt(from.index)) }
         viewModel.reorderHabits(habitList.map { it.habit })
     }
 
+    // Update list only when not dragging
+    LaunchedEffect(uiState.habitsWithStatus) {
+        if (!reorderState.isAnyItemDragging) {
+            habitList = uiState.habitsWithStatus
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     var lastDoneCount by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(uiState.completedCount) {
         if (uiState.completedCount > lastDoneCount && lastDoneCount >= 0) {
             val msg = when {
@@ -99,7 +102,8 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item {
+            // ── Header ─────────────────────────────────────────────────────
+            item(key = "header") {
                 Column(Modifier.padding(horizontal = 24.dp)) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -112,13 +116,18 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.headlineLarge,
                                 color = Color(0xFFF0EFF8)
                             )
-                            Text(formattedDate(), style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                text = formattedDate(),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                         IconButton(onClick = onNavigateToStats) {
                             Icon(Icons.Default.EmojiEvents, "Stats", tint = Amber400)
                         }
                     }
+
                     Spacer(Modifier.height(20.dp))
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
@@ -127,7 +136,7 @@ fun HomeScreen(
                             progress = uiState.progressPercent,
                             size = 120.dp,
                             progressColor = when {
-                                uiState.progressPercent >= 1f -> Green400
+                                uiState.progressPercent >= 1f  -> Green400
                                 uiState.progressPercent >= 0.5f -> Indigo500
                                 else -> Pink400
                             }
@@ -141,6 +150,7 @@ fun HomeScreen(
                                 Text("du jour", style = MaterialTheme.typography.bodySmall)
                             }
                         }
+
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 "${uiState.completedCount}/${uiState.totalCount} habitudes",
@@ -148,8 +158,8 @@ fun HomeScreen(
                             )
                             XpProgressBar(
                                 current = uiState.xpInCurrentLevel,
-                                max = uiState.xpToNextLevel,
-                                level = uiState.xpLevel,
+                                max    = uiState.xpToNextLevel,
+                                level  = uiState.xpLevel,
                                 modifier = Modifier.width(180.dp)
                             )
                             AnimatedVisibility(uiState.progressPercent >= 1f) {
@@ -157,21 +167,23 @@ fun HomeScreen(
                             }
                         }
                     }
+
                     Spacer(Modifier.height(24.dp))
                     Text(
                         "MES HABITUDES",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color(0xFF8B8AA8),
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
             }
 
+            // ── Cards ───────────────────────────────────────────────────────
             items(habitList, key = { it.habit.id }) { item ->
                 ReorderableItem(reorderState, key = item.habit.id) {
                     HabitCard(
-                        item = item,
-                        onToggle = { viewModel.toggleHabit(item.habit.id, item.completedToday) },
+                        item         = item,
+                        onToggle     = { viewModel.toggleHabit(item.habit.id, item.completedToday) },
                         onFocusClick = {
                             onNavigateToFocus(
                                 item.habit.id, item.habit.name,
@@ -179,7 +191,7 @@ fun HomeScreen(
                             )
                         },
                         dragModifier = Modifier.draggableHandle(),
-                        modifier = Modifier
+                        modifier     = Modifier
                             .padding(horizontal = 24.dp)
                             .animateItem()
                     )
@@ -187,7 +199,7 @@ fun HomeScreen(
             }
 
             if (habitList.isEmpty()) {
-                item {
+                item(key = "empty") {
                     Box(
                         Modifier.fillMaxWidth().padding(40.dp),
                         contentAlignment = Alignment.Center
@@ -195,7 +207,7 @@ fun HomeScreen(
                         Text(
                             "Appuie sur + pour ajouter ta première habitude !",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color(0xFF8B8AA8)
                         )
                     }
                 }
@@ -219,18 +231,20 @@ private fun AddHabitDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String, Int, Int, String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var emoji by remember { mutableStateOf("⭐") }
+    var name     by remember { mutableStateOf("") }
+    var emoji    by remember { mutableStateOf("⭐") }
     var duration by remember { mutableIntStateOf(5) }
-    var xp by remember { mutableIntStateOf(30) }
-    val colors = listOf("#6C63FF", "#2ECF8A", "#FF6584", "#FFB547", "#9B59B6", "#4FC3F7")
-    var selectedColor by remember { mutableStateOf(colors[0]) }
+    var xp       by remember { mutableIntStateOf(30) }
+    val colorOptions = remember {
+        listOf("#6C63FF", "#2ECF8A", "#FF6584", "#FFB547", "#9B59B6", "#4FC3F7")
+    }
+    var selectedColor by remember { mutableStateOf(colorOptions[0]) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
+        containerColor   = SurfaceDark,
         title = { Text("Nouvelle habitude") },
-        text = {
+        text  = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
@@ -250,8 +264,7 @@ private fun AddHabitDialog(
                             onValueChange = { duration = it.toInt() },
                             valueRange = 1f..30f,
                             colors = SliderDefaults.colors(
-                                thumbColor = Indigo500,
-                                activeTrackColor = Indigo500
+                                thumbColor = Indigo500, activeTrackColor = Indigo500
                             )
                         )
                     }
@@ -263,16 +276,16 @@ private fun AddHabitDialog(
                         onValueChange = { xp = it.toInt() },
                         valueRange = 10f..100f,
                         colors = SliderDefaults.colors(
-                            thumbColor = Green400,
-                            activeTrackColor = Green400
+                            thumbColor = Green400, activeTrackColor = Green400
                         )
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    colors.forEach { hex ->
-                        val c = runCatching {
-                            Color(android.graphics.Color.parseColor(hex))
-                        }.getOrDefault(Indigo500)
+                    colorOptions.forEach { hex ->
+                        val c = remember(hex) {
+                            runCatching { Color(android.graphics.Color.parseColor(hex)) }
+                                .getOrDefault(Indigo500)
+                        }
                         Box(
                             Modifier
                                 .size(28.dp)
@@ -291,7 +304,9 @@ private fun AddHabitDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (name.isNotBlank()) onConfirm(name, emoji, duration, xp, selectedColor) },
+                onClick = {
+                    if (name.isNotBlank()) onConfirm(name, emoji, duration, xp, selectedColor)
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Indigo500)
             ) { Text("Ajouter") }
         },
@@ -306,7 +321,7 @@ private fun greeting(): String {
     return when {
         hour < 12 -> "Bonjour ☀️"
         hour < 18 -> "Bon après-midi 🌤"
-        else -> "Bonsoir 🌙"
+        else      -> "Bonsoir 🌙"
     }
 }
 
